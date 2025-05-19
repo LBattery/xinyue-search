@@ -167,7 +167,7 @@ switch ($step) {
 			//链接数据库
 			$mysqli = new mysqli($dbHost, $dbUser, $dbPwd);
 			//导入政采商品
-			$sitegoods = trim($_POST['sitegoods']);
+//			$sitegoods = trim($_POST['sitegoods']);
 			// 获取错误信息
 			$error=$mysqli->connect_error;
 			if (!is_null($error)) {

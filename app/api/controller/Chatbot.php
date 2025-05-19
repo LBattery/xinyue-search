@@ -5,7 +5,10 @@ namespace app\api\controller;
 use app\api\QfShop;
 use think\facade\Request;
 use think\facade\Cache;
+use think\facade\Log;
 use app\model\Source as SourceModel;
+use app\model\Conf as ConfModel;
+
 
 class Chatbot extends QfShop
 {
@@ -15,13 +18,13 @@ class Chatbot extends QfShop
     // 3、服务发布
     // 以上三步完成 还不行  就是无缘
     // 无法使用：ping chatbot.weixin.qq.com   延迟太高不行 或者 证书问题
-    private $appId = '';
-    private $token = '';
-    private $encodingAESKey = '';
+    private $appId = 'woHjCwUdHwCQueA';
+    private $token = 'WiReigTKfSWtNPbzn69OQxxvL5eUVS';
+    private $encodingAESKey = 'F9jARncDWvkkXRt0OAPOYEVXjbrGuCLizj52j1u74O2';
 
     
     // 回复内容在下方，如有需要自行修改
-    private $wName = '心悦搜索';
+    private $wName = '彦祖测试';
     
     private $key;
 
@@ -47,75 +50,92 @@ class Chatbot extends QfShop
         
         $msgtype = $msg['content']['msgtype']??'';
         $message = $msg['content']['msg']??'';
+        Log::info('msg start');
+        Log::info(json_encode($message, JSON_UNESCAPED_UNICODE));
+        Log::info(json_encode($msg, JSON_UNESCAPED_UNICODE));
         if ($msgtype !== 'text' || empty($message)) {
             if(Cache::get($msg['userid']) != 1){
                 $messages = "欢迎来到 ".$this->wName."！🍿🎬 这里是影迷的梦幻天堂，准备好享受每一部影视的精彩时刻吧！\n\n";
                 $messages .= "🔍 使用指南 🔍\n\n";
-                $messages .= "1. 搜剧命令\n";
-                $messages .= "回复 “搜剧+剧名”，免费获取最全的影视资源。\n";
-                $messages .= "示例：<a href='weixin://bizmsgmenu?msgmenucontent=搜剧我被美女包围了&msgmenuid=搜剧我被美女包围了'>搜剧我被美女包围了</a>\n\n";
-                $messages .= "2. 全网搜\n";
-                $messages .= "回复 “全网搜+关键词”，快速找到全网资源！\n";
-                $messages .= "示例：<a href='weixin://bizmsgmenu?msgmenucontent=全网搜学剪辑&msgmenuid=全网搜学剪辑'>全网搜学剪辑</a>\n\n";
-                $messages .= "赶快准备好你的爆米花，和我们一起开启下一场视觉盛宴吧！🎥";
-                
+                $messages .= "1. 转存命令\n";
+                $messages .= "回复 “转存+网盘链接”\n";
+                $messages .= "示例：转存https://pan.baidu.com/s/1P1G_XFbrnntQ6WRJ7KuwKw?pwd=6789\n\n";
+                // $messages .= "2. 全网搜\n";
+                // $messages .= "回复 “全网搜+关键词”，快速找到全网资源！\n";
+                // $messages .= "示例：<a href='weixin://bizmsgmenu?msgmenucontent=全网搜学剪辑&msgmenuid=全网搜学剪辑'>全网搜学剪辑</a>\n\n";
+                // $messages .= "赶快准备好你的爆米花，和我们一起开启下一场视觉盛宴吧！🎥";
+                Log::info(json_encode($messages, JSON_UNESCAPED_UNICODE));
                 $this->sendMessage($msg, $messages);
             }
             Cache::set($msg['userid'], 1, 604800);
         }
+        $this->confModel = new ConfModel();
+        $configs = $this->confModel->select()->toArray();
+        $c = [];
+        foreach ($configs as $config) {
+            $c[$config['conf_key']] = $config['conf_value'];
+        }
+        config($c, 'qfshop');
         // 检查用户消息内容中开头第一个字是否包含“搜”关键字
-        if (strpos($message, '搜') === 0 || strpos($message, '全网搜') === 0) {
-            
+        if (strpos($message, '搜') === 0 || strpos($message, '全网搜') === 0 || strpos($message, '转存') === 0) {
+            Log::info('if start');
             if(strncmp($message, '全网搜', 1) === 0){
                 $list = [];
                 // 去除“全网搜”关键字，提取用户输入的剧名
                 $newString = preg_replace('/^全网搜/u', '', $message);
             }else{
-                // 去除“搜剧”关键字，提取用户输入的剧名
-                $newString = preg_replace('/^搜剧|^搜/u', '', $message);
+                Log::info('转存 start');
+                // 去除"转存"关键字，提取用户输入的链接
+                $newString = preg_replace('/^转存/u', '', $message);
                 
-                // 实例化资源模型，并搜索匹配的剧名
-                $map['page_size'] = 5;
-                $map['title'] = $newString;
-                $SourceModel = new SourceModel();
-                $result = $SourceModel->getList($map);
-                $list = $result['items']??[];
+                Log::info($newString);
+                $result = $this->transferByMap(['url' => trim($newString)]);
+                $resp = $result['items']??[];
+                Log::info('convert start');
+                Log::info(json_encode($resp, JSON_UNESCAPED_UNICODE));
             }
             
             
             
-            if(empty($list)){
-                //系统没有资源去全网搜 
-                $this->sendMessage($msg, "正在深入搜索，请稍等...");
+            // if(empty($list)){
+            //     //系统没有资源去全网搜 
+            //     $this->sendMessage($msg, "正在深入搜索，请稍等...");
                 
-                $list = $this->Qsearch($newString);
-            }
+            //     $list = $this->Qsearch($newString);
+            // }
             
-            $content = "🔍 ".$newString."丨搜索结果";
+            $content = "🔍 转存结果";
             $is_times = 0;
-            if (!empty($list)) {
-                foreach ($list as $item) {
-                    $content = $content . "\n　\n";
-                    if(!empty($item['is_time']) && $item['is_time'] == 1){
-                        $content = $content . "\n🌐️ " . $item['title'] . "\n<a href='" . $item['url'] . "'>" . $item['url'] . "</a>";
-                        $is_times++;
-                    }else{
-                    $content = $content . "\n" . $item['title'] . "\n<a href='" . $item['url'] . "'>" . $item['url'] . "</a>"; 
-                    }
-                }
-                $content = $content . "\n　\n";
-                if($is_times>0){
-                    $content = $content . "🌐️ 资源来源网络，30分钟后删除";
-                }else if(!empty($newString)){
-                    $content = $content . "不是短剧？请尝试：<a href='weixin://bizmsgmenu?msgmenucontent=全网搜".$newString."&msgmenuid=全网搜".$newString."'>全网搜".$newString."</a>";
-                }
-                // $content = $content . "\n ------------------------------------------------";
-                $content = $content . "\n 欢迎观看！如果喜欢可以喊你的朋友一起来哦";
+            // if (!empty($list)) {
+            //     foreach ($list as $item) {
+            //         $content = $content . "\n　\n";
+            //         if(!empty($item['is_time']) && $item['is_time'] == 1){
+            //             $content = $content . "\n🌐️ " . $item['title'] . "\n<a href='" . $item['url'] . "'>" . $item['url'] . "</a>";
+            //             $is_times++;
+            //         }else{
+            //         $content = $content . "\n" . $item['title'] . "\n<a href='" . $item['url'] . "'>" . $item['url'] . "</a>"; 
+            //         }
+            //     }
+            //     $content = $content . "\n　\n";
+            //     if($is_times>0){
+            //         $content = $content . "🌐️ 资源来源网络，30分钟后删除";
+            //     }else if(!empty($newString)){
+            //         $content = $content . "不是短剧？请尝试：<a href='weixin://bizmsgmenu?msgmenucontent=全网搜".$newString."&msgmenuid=全网搜".$newString."'>全网搜".$newString."</a>";
+            //     }
+            //     // $content = $content . "\n ------------------------------------------------";
+            //     $content = $content . "\n 欢迎观看！如果喜欢可以喊你的朋友一起来哦";
+            // } else {
+            //     // 如果没有找到匹配的剧名，提示用户减少关键词尝试搜索
+            //     $content = $content . "\n";
+            //     $content = $content . "\n 未找到，可换个关键词尝试哦~";
+            //     $content = $content . "\n ⚠️宁少写，不多写、错写~";
+            // }
+            if (!empty($result) && $result['code'] == 200) {
+                $content = $content . "\n转存成功！\n";
+                $content = $content . "标题：" . ($result['data']['title'] ?? '') . "\n";
+                $content = $content . "链接：" . ($result['data']['share_url'] ?? '');
             } else {
-                // 如果没有找到匹配的剧名，提示用户减少关键词尝试搜索
-                $content = $content . "\n";
-                $content = $content . "\n 未找到，可换个关键词尝试哦~";
-                $content = $content . "\n ⚠️宁少写，不多写、错写~";
+                $content = $content . "\n转存失败：" . ($result['msg'] ?? '未知错误');
             }
             $this->sendMessage($msg, $content);
         }
@@ -378,5 +398,52 @@ class Chatbot extends QfShop
 
         // 写入日志文件
         file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
+
+    /**
+     * 通过map参数获取数据的transfer方法
+     * @param array $map 参数数组
+     * @return array
+     */
+    public function transferByMap($map)
+    {
+        if(Config('qfshop.api_key') != input('api_key')){
+            // return jerr('api_key错误');
+        }
+        Log::info('transfer start');
+        if(empty($map['url'])){
+            return ['code' => 400, 'msg' => '资源地址不能为空'];
+        }
+
+        try {
+            // 从URL中提取提取码
+            $code = '';
+            if(strpos($map['url'], 'pwd=') !== false){
+                preg_match('/pwd=([a-zA-Z0-9]{4})/', $map['url'], $matches);
+                if(!empty($matches[1])){
+                    $code = $matches[1];
+                }
+            }
+
+            $urlData = [
+                'expired_type' => 2,  // 1正式资源 2临时资源
+                'url' => trim($map['url']), // 添加trim确保URL没有多余空格
+                'code' => $code,
+                'isType' => 0,
+            ];
+
+            $transfer = new \netdisk\Transfer();
+            $res = $transfer->transfer($urlData);
+
+            if($res['code'] !== 200){
+                Log::error('转存失败：' . ($res['message'] ?? '未知错误'));
+                return ['code' => $res['code'], 'msg' => $res['message']];
+            }
+
+            return ['code' => 200, 'msg' => '获取成功', 'data' => $res['data']];
+        } catch (\Exception $e) {
+            Log::error('转存异常：' . $e->getMessage());
+            return ['code' => 500, 'msg' => '系统异常，请稍后重试'];
+        }
     }
 }

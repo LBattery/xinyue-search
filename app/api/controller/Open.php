@@ -51,5 +51,4 @@ class Open extends QfShop
         }
         return jok("获取成功",$res['data']);
     }
-
 }

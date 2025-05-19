@@ -130,7 +130,9 @@ if (!function_exists('config')) {
      */
     function config($name = '', $value = null)
     {
+        Log::info($name);
         if (is_array($name)) {
+            Log::info('进入配置判断');
             return Config::set($name, $value);
         }
 

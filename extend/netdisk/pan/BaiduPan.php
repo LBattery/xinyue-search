@@ -1,6 +1,8 @@
 <?php
 namespace netdisk\pan;
 
+use think\facade\Log;
+
 class BaiduPan extends BasePan
 {
 
@@ -10,6 +12,8 @@ class BaiduPan extends BasePan
             $pdir_fid = '/';
         }
         $cookie = Config('qfshop.baidu_cookie');
+        Log::info('开始获取cookie');
+        Log::info($cookie);
         $network = new \netdisk\pan\BaiduWork($cookie);
 
         $res = $network->getDirList($pdir_fid);
@@ -24,6 +28,8 @@ class BaiduPan extends BasePan
     public function transfer($pwd_id)
     {
         $cookie = Config('qfshop.baidu_cookie');
+        Log::info('开始获取cookie');
+        Log::info($cookie);
         $network = new \netdisk\pan\BaiduWork($cookie);
 
         $bdstoken = $network->getBdstoken();
@@ -33,6 +39,7 @@ class BaiduPan extends BasePan
         $linkUrl = $urlParts['scheme'] . '://' . $urlParts['host'] . $urlParts['path']; // 分享链接
         $passCode = $this->code; // 4位提取码
 
+        Log::info('提取码');
 
         // 先判断是否有提取码
         if (!empty($passCode)) {
@@ -69,6 +76,8 @@ class BaiduPan extends BasePan
             $folderName = '/心悦转存文件';  // 未设置时默认目录
         }
 
+        Log::info('文件夹开始');
+        Log::info($folderName);
         // 检查目录名是否包含非法字符
         $invalidChars = ['<', '>', '|', '*', '?', '\\', ':'];
         foreach ($invalidChars as $char) {

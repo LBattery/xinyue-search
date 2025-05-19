@@ -3,7 +3,7 @@
 namespace app\model;
 
 use app\model\QfShop;
-
+use think\facade\Log;
 use Lizhichao\Word\VicWord;
 
 class Source extends QfShop
@@ -337,5 +337,48 @@ class Source extends QfShop
         return $result;
     }
     
-    
+    /**
+     * 通过map参数获取数据的transfer方法
+     * @param array $map 参数数组
+     * @return array
+     */
+    public function transferByMap($map)
+    {
+        Log::info('transfer start');
+        if(empty($map['url'])){
+            return ['code' => 400, 'msg' => '资源地址不能为空'];
+        }
+
+        try {
+            // 从URL中提取提取码
+            $code = '';
+            if(strpos($map['url'], 'pwd=') !== false){
+                preg_match('/pwd=([a-zA-Z0-9]{4})/', $map['url'], $matches);
+                if(!empty($matches[1])){
+                    $code = $matches[1];
+                }
+            }
+
+        try {
+            $urlData = [
+                'expired_type' => 2,  // 1正式资源 2临时资源
+                'url' => trim($map['url']), // 添加trim确保URL没有多余空格
+                'code' => $code,
+                'isType' => 0,
+            ];
+
+            $transfer = new \netdisk\Transfer();
+            $res = $transfer->transfer($urlData);
+
+            if($res['code'] !== 200){
+                Log::error('转存失败：' . ($res['message'] ?? '未知错误'));
+                return ['code' => $res['code'], 'msg' => $res['message']];
+            }
+
+            return ['code' => 200, 'msg' => '获取成功', 'data' => $res['data']];
+        } catch (\Exception $e) {
+            Log::error('转存异常：' . $e->getMessage());
+            return ['code' => 500, 'msg' => '系统异常，请稍后重试'];
+        }
+    }
 }

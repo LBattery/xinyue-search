@@ -1,6 +1,8 @@
 <?php
 namespace netdisk\pan;
 
+use think\facade\Log;
+
 class QuarkPan extends BasePan
 {
     public function __construct($config = [])
@@ -243,6 +245,7 @@ class QuarkPan extends BasePan
             $to_pdir_fid = Config('qfshop.quark_file'); //默认存储路径
             if($this->expired_type == 2){
                 $to_pdir_fid = Config('qfshop.quark_file_time'); //临时资源路径
+                Log::info($to_pdir_fid);
             }
         }
         

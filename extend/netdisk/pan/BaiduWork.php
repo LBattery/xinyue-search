@@ -1,6 +1,8 @@
 <?php
 namespace netdisk\pan;
 
+use think\facade\Log;
+
 class BaiduWork
 {
     protected $errorCodes = [
@@ -109,6 +111,10 @@ class BaiduWork
             'block_list' => '[]'
         ];
 
+        $dataString = print_r($data, true);
+
+        // 记录对象信息到日志中
+        Log::info('data details: ' . $dataString); 
         $res = $this->request('POST', $url, $params, $data);
         return $res['errno'];
     }
@@ -194,6 +200,23 @@ class BaiduWork
         ];
 
         $res = $this->request('POST', $url, $params, $data);
+        // 记录API响应日志
+        
+        // 使用print_r将对象转换为字符串
+        $resString = print_r($res, true);
+        $reqString = print_r($params, true);
+        $dataString = print_r($data, true);
+
+        // 记录对象信息到日志中
+        Log::info('Object details: ' . $url);
+        Log::info('Object details: ' . $resString);
+        Log::info('Object details: ' . $reqString);
+        Log::info('Object details: ' . $dataString);
+        Log::info('API响应内容', [
+                    'url' => $url,
+                    'data' => $data,
+                    'response' => is_string($res) ? $res : json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+                ]);
         return $res['errno'];
     }
 
@@ -258,6 +281,16 @@ class BaiduWork
                 }
 
                 $response = curl_exec($ch);
+                $reqString = print_r($url, true);
+                $paramString = print_r($params, true);
+                $dataString = print_r($data, true);
+                $resString = print_r($response, true);
+
+                // 记录对象信息到日志中
+                Log::info('url details: ' . $reqString); 
+                Log::info('param details: ' . $paramString); 
+                Log::info('data details: ' . $dataString); 
+                Log::info('Object details: ' . $resString); 
                 curl_close($ch);
 
                 if ($response === false) {

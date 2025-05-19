@@ -1,6 +1,8 @@
 <?php
 namespace netdisk;
 
+use think\facade\Log;
+
 class Transfer
 {
     public function __construct()
@@ -36,7 +38,9 @@ class Transfer
     
     public function transfer($urlData = [])
     {
+        Log::info('开始执行转存');
         $url = $urlData['url']??'';
+        Log::info($url);
         $config = [
             'isType' => $urlData['isType'] ?? input('isType') ?? 0,
             'url' => $url,
@@ -88,6 +92,7 @@ class Transfer
             return $pan->transfer(strtok($pwd_id, '#'));
         } else if($url_type == 2){
             //百度网盘
+            Log::info('百度开始');
             $pan = new \netdisk\pan\BaiduPan($config);
             return $pan->transfer(strtok($pwd_id, '#'));
         } else if($url_type == 3){
